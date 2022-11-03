@@ -1,0 +1,9 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/smagin/Dima/ Job/chopper_test",
+            "binaryPath": "/home/smagin/Dima/ Job/chopper_test/chopper_test",
+            "binaryArgs": []
+        }
+    ]
+}
