@@ -12,11 +12,11 @@
 #include <iostream>
 #include <readascii.hpp>
 
-double U = 25.0e3; //не больше 30 кВ, а лучше 25кВ
+double U = 20.0e3; //не больше 30 кВ, а лучше 25кВ
 double ground = -40.0e3;
 double  cond_length = 0.15;
 double collector_length = 0.1;
-double cond_width = 0.14;
+double cond_width = 0.1;
 double I0 = 0.0;
 double I1 = 0.0;
 double I2 = 0.0;
@@ -41,11 +41,11 @@ bool cyl_3(double x,double y,double z){
 
 void simu(void){
 
-    double const x = 140;
-    double const y = 140;
+    double const x = cond_length*1000;
+    double const y = cond_length*1000;
     double const z = 450;
     double const mesh_step = 0.002;
-    Geometry geom( MODE_3D, Int3D(ceil(x/(mesh_step*1000)),ceil(y/(mesh_step*1000)),ceil(z/(mesh_step*1000))), Vec3D(-0.07,-0.07,0.7), mesh_step );
+    Geometry geom( MODE_3D, Int3D(ceil(x/(mesh_step*1000)),ceil(y/(mesh_step*1000)),ceil(z/(mesh_step*1000))), Vec3D(-cond_length/2.0,-cond_length/2.0,0.7), mesh_step );
 
     
     Solid *Cyl_1 = new FuncSolid( cyl_1 );
@@ -131,8 +131,21 @@ void simu(void){
     }
     std::cout << "output current = " << I0 << std::endl;
 
-    pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82, diagnostics );
+    pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82, diagnostics );//снимаем ток в начале конденсатора
 
+    for (int i = 0; i < din.rows();i++)
+    {
+        if (i % 100 == 0){ std::cout << tdata(0)[i] << std::endl; }
+        I1 += tdata(0)[i];
+    }
+    pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82+cond_length, diagnostics );//снимаем ток через плоскость в конце конденсатора
+    for (int i = 0; i < din.rows();i++)
+    {   
+        if ( i %100 == 0){ std::cout << tdata(0)[i] << std::endl; }
+        I2 += tdata(0)[i];
+    }    
+
+    std::cout << "cond current = " << I2-I0 << std::endl;
 }
 
 int main( int argc, char **argv )
