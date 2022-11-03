@@ -14,17 +14,21 @@
 
 double U = 25.0e3; //не больше 30 кВ, а лучше 25кВ
 double ground = -40.0e3;
-double  const cond_length = 0.15;
-double const collector_length = 0.1;
+double  cond_length = 0.15;
+double collector_length = 0.1;
+double cond_width = 0.14;
+double I0 = 0.0;
+double I1 = 0.0;
+double I2 = 0.0;
 
 bool cyl_1(double x,double y,double z){
         return (x*x + y*y >= (0.04)*(0.04) && z <= 0.8);
     }
 bool cond_down(double x,double y,double z){
-        return(z>=0.82 && z<= (0.82+ cond_length ) && y>=-0.07 && y<=0.07 && x>=-0.070 && x <= -0.065); 
+        return(z>=0.82 && z<= (0.82+ cond_length ) && y>=-0.07 && y<=0.07 && x>=-(cond_width/2.0) && x <= -(cond_width/2.0 - 0.005)); 
     }
 bool cond_up(double x,double y,double z){
-        return(z>=0.82 && z<=(0.82 + cond_length ) && y>=-0.07 && y<=0.07 && x >= 0.065 && x<=0.070); 
+        return(z>=0.82 && z<=(0.82 + cond_length ) && y>=-0.07 && y<=0.07 && x >= (cond_width/2.0)-0.005 && x<=(cond_width/2.0)); 
     }
 bool cyl_2(double x,double y,double z){
         return (x*x + y*y >= (0.065)*(0.065) && z >= (0.84+ cond_length) && z<=(0.84+ cond_length + collector_length)); 
@@ -120,6 +124,13 @@ void simu(void){
     }
     diagnostics.push_back(DIAG_CURR);    
     pdb.trajectories_at_plane( tdata, AXIS_Z, geom.max(2)-geom.h(), diagnostics );
+
+    for (int i = 0; i < din.rows();i++){
+        if ( i%100 == 0){ std::cout << tdata(0)[i] << std::endl; }
+        I0 += tdata(0)[i];
+    }
+    std::cout << "output current = " << I0 << std::endl;
+
     pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82, diagnostics );
 
 }
