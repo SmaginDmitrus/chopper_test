@@ -19,9 +19,7 @@ double U = 25.0e3; //не больше 30 кВ, а лучше 25кВ
 double ground = -40.0e3;
 double  cond_length;//варьируем от 0.075 до 0.2
 double cond_width;//варьируем от 0.08 до 0.16 м 
-double I0 = 0.0;
-double I1 = 0.0;
-double I2 = 0.0;
+
 ofstream fresult("results.txt");
 
 
@@ -51,6 +49,9 @@ void simu(void){
     double const y = 150;
     double const z = 500;
     double const mesh_step = 0.002;
+    double I0 = 0.0;
+    double I1 = 0.0;
+    double I2 = 0.0;
     Geometry geom( MODE_3D, Int3D(ceil(x/(mesh_step*1000)),ceil(y/(mesh_step*1000)),ceil(z/(mesh_step*1000))), Vec3D(-0.15/2.0,-0.15/2.0,0.7), mesh_step );
 
 
@@ -129,7 +130,7 @@ void simu(void){
     // geomplotter.plot_png( buffer );
     }
     diagnostics.push_back(DIAG_CURR);
-    pdb.trajectories_at_plane( tdata, AXIS_Z, geom.max(2)-geom.h(), diagnostics );
+    pdb.trajectories_at_plane( tdata, AXIS_Z, geom.max(2)-geom.h(), diagnostics );//снимаем ток на выходе
 
     for (size_t i = 0; i < tdata.traj_size();i++){
             I0 += tdata(0)[i];
@@ -150,11 +151,10 @@ void simu(void){
         I2 += tdata(0)[i];
     }
 
-    cout << "cond current = " << I1-I2<< endl;
-    if ((I2-I1)<0.0005){
-    fresult<<cond_length<<" "<<cond_width<<" "<<I0<<endl;
-    }
-    fresult.close(); 
+    
+    fresult<<cond_length<<" "<<cond_width<<" "<<I0<<" "<<I1-I2<<endl;
+    
+    
 }
 
 int main( int argc, char **argv )
@@ -163,9 +163,11 @@ int main( int argc, char **argv )
 	ibsimu.set_message_threshold( MSG_VERBOSE, 1 );
 	ibsimu.set_thread_count( 4 );
     for (cond_length = 0.075;cond_length<=0.2;cond_length+=0.001){
-        for(cond_width=0.08;cond_width<=0.16;cond_width+=0.01){
+       for(cond_width=0.08;cond_width<=0.16;cond_width+=0.01){
         simu();
-    }}
+        }
+    }
+    fresult.close(); 
     } catch ( Error e ) {
         e.print_error_message( ibsimu.message( 0 ) );
         exit( 1 );
