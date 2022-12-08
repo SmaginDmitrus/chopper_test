@@ -19,7 +19,7 @@ double U = 25.0e3; //не больше 30 кВ, а лучше 25кВ
 double ground = -40.0e3;
 double  cond_length;//варьируем от 0.075 до 0.2
 double cond_width;//варьируем от 0.08 до 0.16 м 
-ofstream result("results.txt", ios_base::app);
+//ofstream result("results.txt", ios_base::app);
 
 
 
@@ -79,10 +79,13 @@ void simu(void){
     geom.build_mesh();
 
     EpotBiCGSTABSolver solver( geom );
-
+    bool fout1[3]= {true,true,false};
+    bool fout2[3]= {true,true,true};
     EpotField epot( geom );
     MeshScalarField scharge( geom );
-    MeshVectorField bfield;
+    MeshVectorField bfieldCyl(MODE_CYL,fout1,1e-3,300.0,"external_magnetic_field.dat");
+    bfielCyl.translate(Vec3D(0.29,0));
+    MeshVectorField bfield(MODE_3D,fout2,Int3D(ceil(x/(mesh_step*1000)),ceil(y/(mesh_step*1000))),Vec3D(-0.15/2.0,-0.15/2.0,0.55),mesh_step,bfieldCyl);
     EpotEfield efield( epot );
     field_extrpl_e efldextrpl[6] = { FIELD_EXTRAPOLATE, FIELD_EXTRAPOLATE,
                                     FIELD_EXTRAPOLATE,FIELD_EXTRAPOLATE,
@@ -92,7 +95,7 @@ void simu(void){
     bool pmirror[6] = { false, false, false, false, false, false };
     pdb.set_mirror( pmirror );
 
-    ReadAscii din( "particles", 10 );
+    ReadAscii din( "particles.txt", 10 );
     GeomPlotter geomplotter( geom );
     string buffer = "plot";
 
@@ -102,7 +105,7 @@ void simu(void){
 
 
     for( int i = 0; i < 4; i++ ) {
-        solver.solve( epot, scharge );
+        //solver.solve( epot, scharge );
         efield.recalculate();
         pdb.clear();
         buffer = "plot" ;
@@ -129,29 +132,29 @@ void simu(void){
     geomplotter.set_view(VIEW_ZX);
     geomplotter.plot_png( buffer );
     }
-    diagnostics.push_back(DIAG_CURR);
-    pdb.trajectories_at_plane( tdata, AXIS_Z, geom.max(2)-geom.h(), diagnostics );//снимаем ток на выходе
+    // diagnostics.push_back(DIAG_CURR);
+    // pdb.trajectories_at_plane( tdata, AXIS_Z, geom.max(2)-geom.h(), diagnostics );//снимаем ток на выходе
 
-    for (size_t i = 0; i < tdata.traj_size();i++){
-            I0 += tdata(0)[i];
-    }
-    cout << "output current = " << I0 << endl;
+    // for (size_t i = 0; i < tdata.traj_size();i++){
+    //         I0 += tdata(0)[i];
+    // }
+    // cout << "output current = " << I0 << endl;
     
-    pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82, diagnostics );//снимаем ток в начале конденсатора
+    // pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82, diagnostics );//снимаем ток в начале конденсатора
 
-    for (size_t i = 0; i < tdata.traj_size();i++)
-    {
+    // for (size_t i = 0; i < tdata.traj_size();i++)
+    // {
     
-        I1 += tdata(0)[i];
-    }
-    pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82+cond_length, diagnostics );//снимаем ток через плоскость в конце конденсатора
-    for (size_t i = 0; i < tdata.traj_size();i++)
-    {
+    //     I1 += tdata(0)[i];
+    // }
+    // pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82+cond_length, diagnostics );//снимаем ток через плоскость в конце конденсатора
+    // for (size_t i = 0; i < tdata.traj_size();i++)
+    // {
     
-        I2 += tdata(0)[i];
-    }
+    //     I2 += tdata(0)[i];
+    // }
 
-    result << cond_length << " " << cond_width << " " << I0 << " " << I1-I2 << endl;      
+    // result << cond_length << " " << cond_width << " " << I0 << " " << I1-I2 << endl;      
     
     
     
@@ -162,11 +165,11 @@ int main( int argc, char **argv )
     try {
 	ibsimu.set_message_threshold( MSG_VERBOSE, 1 );
 	ibsimu.set_thread_count( 4 );
-    cond_length = 0.2;
-       for(cond_width=0.08;cond_width<=0.16;cond_width+=0.01)
-        {
-            simu();
-        }
+    cond_length = 0.16;
+    cond_width = 0.13;
+
+    simu();
+
     } catch ( Error e ) {
         e.print_error_message( ibsimu.message( 0 ) );
         exit( 1 );
