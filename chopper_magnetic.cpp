@@ -84,8 +84,8 @@ void simu(void){
     EpotField epot( geom );
     MeshScalarField scharge( geom );
     MeshVectorField bfieldCyl(MODE_CYL,fout1,1e-3,300.0,"external_magnetic_field.dat");
-    bfielCyl.translate(Vec3D(0.29,0));
-    MeshVectorField bfield(MODE_3D,fout2,Int3D(ceil(x/(mesh_step*1000)),ceil(y/(mesh_step*1000))),Vec3D(-0.15/2.0,-0.15/2.0,0.55),mesh_step,bfieldCyl);
+    bfieldCyl.translate(Vec3D(0.29,0));
+    MeshVectorField bfield(MODE_3D,fout2,geom.size(),geom.origo(),mesh_step,bfieldCyl);
     EpotEfield efield( epot );
     field_extrpl_e efldextrpl[6] = { FIELD_EXTRAPOLATE, FIELD_EXTRAPOLATE,
                                     FIELD_EXTRAPOLATE,FIELD_EXTRAPOLATE,
