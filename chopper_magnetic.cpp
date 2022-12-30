@@ -13,28 +13,37 @@
 #include <iostream>
 #include <readascii.hpp>
 #include <fstream>
+
+#ifdef GTK3
+#include "gtkplotter.hpp"
+#endif
+
 using namespace std;
 
 double U = 25.0e3; //не больше 30 кВ, а лучше 25кВ
 double ground = -40.0e3;
-double  cond_length;//варьируем от 0.075 до 0.2
-double cond_width;//варьируем от 0.08 до 0.16 м 
-//ofstream result("results.txt", ios_base::app);
+double  cond_length = 0.23;//варьируем от 0.075 до 0.2
+double cond_width = 0.1;//варьируем от 0.08 до 0.14 м 
+double R = 0.25;
+//ofstream result("results_w_bf.txt");
 
 
-
-
+//pow((x-(0.07-(cond_width/2.0))),2.0) + pow(y,2.0)<=0.07*0.07 && pow((x-(0.07-(cond_width/2.0))),2.0) + pow(y,2.0)>=(0.07-0.005)*(0.07-0.005) rounding of down plate in OXY plane
+// (((z>=0.66 && (z<=(0.66 + cond_length/2)) && x>=(cond_width/2)-0.005 && x<=(cond_width/2))||
+//             ( z>=(0.66 + cond_length/2) && z<=(0.66 + cond_length) && pow((x-(R+(cond_width/2.0)-0.005)),2.0) + pow((z-(0.66+(cond_length/2))),2.0)<=R*R && pow((x-(R+(cond_width/2.0)-0.005)),2.0) + pow((z-(0.66+(cond_length/2))),2.0)>=(R-0.005)*(R-0.005)))
+//              &&  y>=-0.07&& y<=0.07); rounding of the second part of upper plate in OXZ plane
 bool cyl_1(double x,double y,double z){
         return (x*x + y*y >= (0.04)*(0.04) && z <= 0.65);//z<=0.8
     }
 bool cond_down(double x,double y,double z){
-        return(z>=0.66 && z<= (0.66 + cond_length ) && y>=-0.07 && y<=0.07 && x>=-(cond_width/2.0) && x <= -(cond_width/2.0 - 0.005));//z>=0.81 && z<= (0.81+ cond_length )
-    }
+        
+    return(z>=0.66 && z<=(0.66 + cond_length) && x>=-(0.050) && x<=-0.045 && y>=-0.07&& y<=0.07);
+}
 bool cond_up(double x,double y,double z){
-        return(z>=0.66 && z<=(0.66 + cond_length ) && y>=-0.07 && y<=0.07 && x >= (cond_width/2.0)-0.005 && x<=(cond_width/2.0));
+        return(z>=0.675 && z<=(0.675 + cond_length-0.05) && pow(x-(R+cond_width/2-0.005),2.0)+pow(z-0.66,2.0)<=R*R && pow(x-(R+cond_width/2-0.005),2.0)+pow(z-0.66,2.0)>=(R-0.005)*(R-0.005) &&  y>=-0.07 && y<=0.07);
     }
 bool cyl_2(double x,double y,double z){
-        return (x*x + y*y >= (0.065)*(0.065) && z >= (0.67+cond_length) && z<=(1.0));//z<=1.15
+        return (x*x + y*y >= (0.08)*(0.08) && z >= (0.67+cond_length) && z<=(1.0));//z<=1.15
     }
 bool cyl_3(double x,double y,double z){
         return (x*x + y*y >= (0.04)*(0.04) && z >= 1.0 && z<=1.05);//z>=1.15 z<=1.2
@@ -42,17 +51,17 @@ bool cyl_3(double x,double y,double z){
 
 
 
-void simu(void){
+void simu(int *argc, char ***argv){
     
 
-    double const x = 150;
-    double const y = 150;
+    double const x = 250;
+    double const y = 250;
     double const z = 500;
     double const mesh_step = 0.002;
     double I0 = 0.0;
     double I1 = 0.0;
     double I2 = 0.0;
-    Geometry geom( MODE_3D, Int3D(ceil(x/(mesh_step*1000)),ceil(y/(mesh_step*1000)),ceil(z/(mesh_step*1000))), Vec3D(-0.15/2.0,-0.15/2.0,0.55), mesh_step );
+    Geometry geom( MODE_3D, Int3D(ceil(x/(mesh_step*1000)),ceil(y/(mesh_step*1000)),ceil(z/(mesh_step*1000))), Vec3D(-0.25/2.0,-0.25/2.0,0.55), mesh_step );
 
 
     Solid *Cyl_1 = new FuncSolid( cyl_1 );
@@ -77,6 +86,7 @@ void simu(void){
     geom.set_boundary( 11, Bound(BOUND_DIRICHLET, ground) );
 
     geom.build_mesh();
+    geom.build_surface();
 
     EpotBiCGSTABSolver solver( geom );
     bool fout1[3]= {true,true,false};
@@ -104,8 +114,8 @@ void simu(void){
 
 
 
-    for( int i = 0; i < 4; i++ ) {
-        //solver.solve( epot, scharge );
+    for( int i = 0; i < 6; i++ ) {
+        solver.solve( epot, scharge );
         efield.recalculate();
         pdb.clear();
         buffer = "plot" ;
@@ -125,38 +135,40 @@ void simu(void){
     }
         buffer = buffer + to_string(i) + ".png";
    pdb.iterate_trajectories( scharge, efield, bfield );
-
-    geomplotter.set_size( 750, 750 );
-    geomplotter.set_epot( &epot );
-    geomplotter.set_particle_database( &pdb );
-    geomplotter.set_view(VIEW_ZX);
-    geomplotter.plot_png( buffer );
     }
-    // diagnostics.push_back(DIAG_CURR);
-    // pdb.trajectories_at_plane( tdata, AXIS_Z, geom.max(2)-geom.h(), diagnostics );//снимаем ток на выходе
 
-    // for (size_t i = 0; i < tdata.traj_size();i++){
-    //         I0 += tdata(0)[i];
-    // }
-    // cout << "output current = " << I0 << endl;
-    
-    // pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82, diagnostics );//снимаем ток в начале конденсатора
+    diagnostics.push_back(DIAG_CURR);
+    pdb.trajectories_at_plane( tdata, AXIS_Z, geom.max(2)-geom.h(), diagnostics );//снимаем ток на выходе
 
-    // for (size_t i = 0; i < tdata.traj_size();i++)
-    // {
+    for (size_t i = 0; i < tdata.traj_size();i++){
+            I0 += tdata(0)[i];
+    }
+    cout << "output current = " << I0 << endl;
     
-    //     I1 += tdata(0)[i];
-    // }
-    // pdb.trajectories_at_plane( tdata, AXIS_Z, 0.82+cond_length, diagnostics );//снимаем ток через плоскость в конце конденсатора
-    // for (size_t i = 0; i < tdata.traj_size();i++)
-    // {
-    
-    //     I2 += tdata(0)[i];
-    // }
+    pdb.trajectories_at_plane( tdata, AXIS_Z, 0.66, diagnostics );//снимаем ток в начале конденсатора
 
-    // result << cond_length << " " << cond_width << " " << I0 << " " << I1-I2 << endl;      
+    for (size_t i = 0; i < tdata.traj_size();i++)
+    {
     
+        I1 += tdata(0)[i];
+    }
+    pdb.trajectories_at_plane( tdata, AXIS_Z, 0.66+cond_length, diagnostics );//снимаем ток через плоскость в конце конденсатора
+    for (size_t i = 0; i < tdata.traj_size();i++)
+    {
     
+        I2 += tdata(0)[i];
+    }
+
+    cout << cond_length << " " << cond_width << " " << I0 << " " << I1-I2 << endl;      
+    
+    GTKPlotter plotter( argc, argv );
+     plotter.set_geometry( &geom );
+     plotter.set_bfield(&bfield);
+     plotter.set_epot( &epot );
+     plotter.set_scharge( &scharge );
+     plotter.set_particledatabase( &pdb );
+     plotter.new_geometry_plot_window();
+     plotter.run(); 
     
 }
 
@@ -164,12 +176,8 @@ int main( int argc, char **argv )
 {
     try {
 	ibsimu.set_message_threshold( MSG_VERBOSE, 1 );
-	ibsimu.set_thread_count( 4 );
-    cond_length = 0.16;
-    cond_width = 0.13;
-
-    simu();
-
+	ibsimu.set_thread_count( 16 );
+            simu(&argc,&argv);
     } catch ( Error e ) {
         e.print_error_message( ibsimu.message( 0 ) );
         exit( 1 );
@@ -177,4 +185,5 @@ int main( int argc, char **argv )
 
     return( 0 );
 }
+
 

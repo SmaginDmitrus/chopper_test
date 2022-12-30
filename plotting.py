@@ -20,12 +20,12 @@ for i in range(len(cond_length)):
         print(i)
         z[i][j] = I0[j+i*8]
 print(z)
-fig5 = plt.figure()
-h5 = plt.contourf(cond_width,cond_length,z,10,cmap='jet')
-plt.title("output current depending on parameters")
-cbar = fig5.colorbar(h5,fraction=0.01)
-plt.xlabel("Capacitor width, mm")
-plt.ylabel("Capacitor length, mm")
-plt.show()
+# fig5 = plt.figure()
+# h5 = plt.contourf(cond_width,cond_length,z,10,cmap='jet')
+# plt.title("output current depending on parameters")
+# cbar = fig5.colorbar(h5,fraction=0.01)
+# plt.xlabel("Capacitor width, mm")
+# plt.ylabel("Capacitor length, mm")
+# plt.show()
 
 
